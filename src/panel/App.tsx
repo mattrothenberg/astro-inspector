@@ -128,7 +128,7 @@ async function fetchBundleSizes(
   return tree;
 }
 
-/** Script injected into the page to build the component tree and capture hydration data */
+/** Script injected into the page to build the component tree */
 function buildTreeInPage() {
   let nodeId = 0;
 
@@ -144,16 +144,7 @@ function buildTreeInPage() {
     depth: number;
     path: string;
     componentUrl?: string;
-    hydrationTime?: number;
   }
-
-  // Get hydration times if we've been tracking them
-  const hydrationTimes: Record<string, number> =
-    (
-      window as unknown as {
-        __astro_inspector_hydration_times__?: Record<string, number>;
-      }
-    ).__astro_inspector_hydration_times__ || {};
 
   function buildTree(element: Element, depth = 0, path = ""): TreeNodeData {
     const tagName = element.tagName.toLowerCase();
@@ -164,7 +155,6 @@ function buildTreeInPage() {
     let props: Record<string, unknown> | undefined;
     let framework: string | undefined;
     let componentUrl: string | undefined;
-    let hydrationTime: number | undefined;
 
     if (isIsland) {
       clientDirective = element.getAttribute("client") || "load";
@@ -206,12 +196,6 @@ function buildTreeInPage() {
       } else if (renderer.includes("preact")) {
         framework = "Preact";
       }
-
-      // Check if we have hydration timing for this island
-      const uid = element.getAttribute("uid");
-      if (uid && hydrationTimes[uid] !== undefined) {
-        hydrationTime = hydrationTimes[uid];
-      }
     }
 
     const node: TreeNodeData = {
@@ -226,7 +210,6 @@ function buildTreeInPage() {
       depth,
       path,
       componentUrl,
-      hydrationTime,
     };
 
     Array.from(element.children).forEach((child, i) => {
@@ -239,44 +222,6 @@ function buildTreeInPage() {
   }
 
   return buildTree(document.body, 0, "");
-}
-
-/** Script to inject hydration timing listeners - should be run early */
-function injectHydrationTimingScript() {
-  // Only inject once
-  if (
-    (window as unknown as { __astro_inspector_injected__?: boolean })
-      .__astro_inspector_injected__
-  ) {
-    return;
-  }
-  (
-    window as unknown as { __astro_inspector_injected__?: boolean }
-  ).__astro_inspector_injected__ = true;
-
-  const times: Record<string, number> = {};
-  (
-    window as unknown as {
-      __astro_inspector_hydration_times__?: Record<string, number>;
-    }
-  ).__astro_inspector_hydration_times__ = times;
-
-  const startTime = performance.now();
-
-  // Listen for hydration events on all astro-islands
-  document.addEventListener(
-    "astro:hydrate",
-    (e) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName.toLowerCase() === "astro-island") {
-        const uid = target.getAttribute("uid");
-        if (uid) {
-          times[uid] = Math.round(performance.now() - startTime);
-        }
-      }
-    },
-    true,
-  );
 }
 
 export function App() {
@@ -298,12 +243,6 @@ export function App() {
         setError("No inspected tab found");
         return;
       }
-
-      // First inject the hydration timing script (idempotent)
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        func: injectHydrationTimingScript,
-      });
 
       const results = await chrome.scripting.executeScript({
         target: { tabId },

@@ -54,18 +54,6 @@ export function DetailsPane({ node }: DetailsPaneProps) {
             </section>
           )}
 
-          {node.hydrationTime !== undefined && (
-            <section className="details-section">
-              <h4>Hydration Time</h4>
-              <div className="details-value">
-                <code>{node.hydrationTime}ms</code>
-                <span className="hydration-indicator">
-                  {getHydrationIndicator(node.hydrationTime)}
-                </span>
-              </div>
-            </section>
-          )}
-
           {node.componentUrl && (
             <section className="details-section">
               <h4>Component URL</h4>
@@ -124,14 +112,4 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Get a visual indicator for hydration time
- */
-function getHydrationIndicator(ms: number): string {
-  if (ms < 50) return " ⚡"; // Fast
-  if (ms < 200) return " ✓"; // OK
-  if (ms < 500) return " ⚠️"; // Slow
-  return " 🐢"; // Very slow
 }

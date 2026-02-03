@@ -17,6 +17,4 @@ export interface TreeNode {
   componentUrl?: string;
   /** Size of the component's JS bundle in bytes */
   bundleSize?: number;
-  /** Time in ms from page load to hydration complete */
-  hydrationTime?: number;
 }

@@ -14,7 +14,6 @@ A Chrome DevTools extension for inspecting [Astro](https://astro.build) websites
 - **Client Directives** - See which hydration strategy each island uses (`client:load`, `client:idle`, `client:visible`, etc.)
 - **Framework Detection** - Identifies React, Vue, Svelte, Solid, and Preact components
 - **Bundle Size** - See the JS bundle size for each island component
-- **Hydration Timing** - Measure how long each island takes to hydrate (with performance indicators)
 - **Props Inspection** - View the props passed to each island
 - **DOM Highlighting** - Hover over any element to highlight it in the page
 - **Click to Scroll** - Click any node to scroll it into view on the page
