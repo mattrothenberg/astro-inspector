@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { TreeNode } from "../../types";
 import { highlightElement, clearHighlight } from "../utils/highlighter";
 
@@ -44,6 +45,14 @@ export function TreeNodeItem({
   const isExpanded = expandedNodes.has(node.id);
   const isSelected = selectedNode?.id === node.id;
   const hasChildren = node.children.length > 0;
+  const labelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected node into view within the tree panel
+  useEffect(() => {
+    if (isSelected && labelRef.current) {
+      labelRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [isSelected]);
 
   const displayName = node.isAstroIsland
     ? node.componentName || "Island"
@@ -70,6 +79,7 @@ export function TreeNodeItem({
   return (
     <div className="tree-node">
       <div
+        ref={labelRef}
         className={`tree-node-label ${isSelected ? "selected" : ""} ${
           node.isAstroIsland ? "island" : ""
         }`}

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { TreeNode } from "../types";
 import { TreeNodeItem } from "./components/TreeNodeItem";
 import { DetailsPane } from "./components/DetailsPane";
 import { Toolbar } from "./components/Toolbar";
+import { scrollToElement } from "./utils/highlighter";
 import "./styles.css";
 
 /** Recursively check if a node or any descendant is an island */
@@ -19,6 +20,35 @@ function collectExpandedNodes(node: TreeNode, result: Set<string>): void {
       collectExpandedNodes(child, result);
     }
   }
+}
+
+/** Flatten the visible tree into a list for keyboard navigation */
+function flattenVisibleTree(
+  node: TreeNode,
+  expandedNodes: Set<string>,
+  result: TreeNode[] = [],
+): TreeNode[] {
+  result.push(node);
+  if (expandedNodes.has(node.id)) {
+    for (const child of node.children) {
+      flattenVisibleTree(child, expandedNodes, result);
+    }
+  }
+  return result;
+}
+
+/** Find parent node in tree */
+function findParent(
+  root: TreeNode,
+  targetId: string,
+  parent: TreeNode | null = null,
+): TreeNode | null {
+  if (root.id === targetId) return parent;
+  for (const child of root.children) {
+    const found = findParent(child, targetId, root);
+    if (found !== null) return found;
+  }
+  return null;
 }
 
 /** Script injected into the page to build the component tree */
@@ -218,6 +248,103 @@ export function App() {
     return filter(tree);
   }, [tree, showIslandsOnly]);
 
+  /** Flattened list of visible nodes for keyboard navigation */
+  const visibleNodes = useMemo(() => {
+    if (!filteredTree) return [];
+    return flattenVisibleTree(filteredTree, expandedNodes);
+  }, [filteredTree, expandedNodes]);
+
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  /** Handle keyboard navigation */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!filteredTree || visibleNodes.length === 0) return;
+
+      const currentIndex = selectedNode
+        ? visibleNodes.findIndex((n) => n.id === selectedNode.id)
+        : -1;
+
+      switch (e.key) {
+        case "ArrowDown": {
+          e.preventDefault();
+          const nextIndex = Math.min(currentIndex + 1, visibleNodes.length - 1);
+          const nextNode = visibleNodes[nextIndex];
+          if (nextNode) {
+            setSelectedNode(nextNode);
+            scrollToElement(nextNode.path);
+          }
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
+          const prevIndex = Math.max(currentIndex - 1, 0);
+          const prevNode = visibleNodes[prevIndex];
+          if (prevNode) {
+            setSelectedNode(prevNode);
+            scrollToElement(prevNode.path);
+          }
+          break;
+        }
+        case "ArrowRight": {
+          e.preventDefault();
+          if (selectedNode) {
+            if (
+              !expandedNodes.has(selectedNode.id) &&
+              selectedNode.children.length > 0
+            ) {
+              // Expand if collapsed and has children
+              toggleNode(selectedNode.id);
+            } else if (
+              selectedNode.children.length > 0 &&
+              expandedNodes.has(selectedNode.id)
+            ) {
+              // Move to first child if expanded
+              const firstChild = selectedNode.children[0];
+              setSelectedNode(firstChild);
+              scrollToElement(firstChild.path);
+            }
+          }
+          break;
+        }
+        case "ArrowLeft": {
+          e.preventDefault();
+          if (selectedNode) {
+            if (
+              expandedNodes.has(selectedNode.id) &&
+              selectedNode.children.length > 0
+            ) {
+              // Collapse if expanded
+              toggleNode(selectedNode.id);
+            } else {
+              // Move to parent
+              const parent = findParent(filteredTree, selectedNode.id);
+              if (parent) {
+                setSelectedNode(parent);
+                scrollToElement(parent.path);
+              }
+            }
+          }
+          break;
+        }
+        case "Enter": {
+          e.preventDefault();
+          if (selectedNode) {
+            scrollToElement(selectedNode.path);
+          }
+          break;
+        }
+      }
+    },
+    [filteredTree, visibleNodes, selectedNode, expandedNodes, toggleNode],
+  );
+
+  /** Handle node selection with scroll */
+  const handleSelectNode = useCallback((node: TreeNode) => {
+    setSelectedNode(node);
+    scrollToElement(node.path);
+  }, []);
+
   return (
     <div className="app">
       <Toolbar
@@ -230,7 +357,12 @@ export function App() {
         onCollapseAll={collapseAll}
       />
       <div className="main-content">
-        <div className="tree-panel">
+        <div
+          className="tree-panel"
+          ref={treeRef}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+        >
           {isLoading && (
             <div className="loading">Loading component tree...</div>
           )}
@@ -242,7 +374,7 @@ export function App() {
                 selectedNode={selectedNode}
                 expandedNodes={expandedNodes}
                 searchQuery={searchQuery}
-                onSelectNode={setSelectedNode}
+                onSelectNode={handleSelectNode}
                 onToggleNode={toggleNode}
               />
             </div>

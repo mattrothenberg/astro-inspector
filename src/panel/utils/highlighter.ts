@@ -136,3 +136,53 @@ export async function clearHighlight(): Promise<void> {
     },
   });
 }
+
+/**
+ * Scrolls an element into view in the inspected page
+ */
+export async function scrollToElement(path: string): Promise<void> {
+  const tabId = chrome.devtools.inspectedWindow.tabId;
+  if (!tabId) return;
+
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    args: [path],
+    func: (elementPath: string) => {
+      // Find the element by path
+      let element: Element | null = document.body;
+      if (elementPath) {
+        const indices = elementPath.split(".").map(Number);
+        for (const index of indices) {
+          if (!element) break;
+          element = element.children[index] || null;
+        }
+      }
+
+      if (!element) return;
+
+      // For astro-island, try to find the first visible child
+      if (
+        element.tagName.toLowerCase() === "astro-island" &&
+        element.children.length > 0
+      ) {
+        const findVisibleChild = (el: Element): Element | null => {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) return el;
+          for (const child of el.children) {
+            const visible = findVisibleChild(child);
+            if (visible) return visible;
+          }
+          return null;
+        };
+        const visibleChild = findVisibleChild(element);
+        if (visibleChild) element = visibleChild;
+      }
+
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    },
+  });
+}

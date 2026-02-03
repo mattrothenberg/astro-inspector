@@ -15,7 +15,18 @@ A Chrome DevTools extension for inspecting [Astro](https://astro.build) websites
 - **Framework Detection** - Identifies React, Vue, Svelte, Solid, and Preact components
 - **Props Inspection** - View the props passed to each island
 - **DOM Highlighting** - Hover over any element to highlight it in the page
+- **Click to Scroll** - Click any node to scroll it into view on the page
+- **Keyboard Navigation** - Use arrow keys to navigate the tree
 - **Search** - Find components by name
+
+### Keyboard Shortcuts
+
+| Key       | Action                                 |
+| --------- | -------------------------------------- |
+| `↑` / `↓` | Navigate up/down through visible nodes |
+| `←`       | Collapse node or move to parent        |
+| `→`       | Expand node or move to first child     |
+| `Enter`   | Scroll selected element into view      |
 
 ## Installation
 
