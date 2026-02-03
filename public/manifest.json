@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Astro Inspector",
+  "version": "0.1.0",
+  "description": "Chrome DevTools extension for inspecting Astro websites",
+  "permissions": ["scripting"],
+  "host_permissions": ["<all_urls>"],
+  "devtools_page": "src/devtools/index.html"
+}

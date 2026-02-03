@@ -1,0 +1,256 @@
+/* Base styles */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  gap: 12px;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toolbar-btn:hover {
+  background: #3c3c3c;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 200px;
+  padding: 6px 28px 6px 8px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 12px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0078d4;
+}
+
+.search-clear {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: none;
+  color: #808080;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.toggle-label input {
+  cursor: pointer;
+}
+
+/* Main content */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tree-panel {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+
+.details-panel {
+  width: 280px;
+  border-left: 1px solid #3c3c3c;
+  overflow: auto;
+}
+
+/* Tree view */
+.tree-view {
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.tree-node {
+  user-select: none;
+}
+
+.tree-node-label {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  gap: 4px;
+}
+
+.tree-node-label:hover {
+  background: #2a2d2e;
+}
+
+.tree-node-label.selected {
+  background: #094771;
+}
+
+.tree-node-label.island {
+  color: #4ec9b0;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: #808080;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.toggle-placeholder {
+  width: 14px;
+}
+
+.island-badge {
+  font-size: 12px;
+  margin-right: 2px;
+}
+
+.node-name {
+  color: #9cdcfe;
+}
+
+.tree-node-label.island .node-name {
+  color: #4ec9b0;
+}
+
+.client-directive {
+  color: #ce9178;
+  font-style: italic;
+}
+
+.highlight {
+  background: #515c6a;
+  color: #fff;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.tree-node-children {
+  padding-left: 16px;
+}
+
+/* Details pane */
+.details-pane {
+  padding: 12px;
+}
+
+.details-pane.empty {
+  color: #808080;
+  text-align: center;
+  padding-top: 40px;
+}
+
+.details-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4ec9b0;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.details-section {
+  margin-bottom: 16px;
+}
+
+.details-section h4 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #808080;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.details-value {
+  font-size: 12px;
+}
+
+.details-value code {
+  background: #3c3c3c;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+}
+
+.island-type {
+  color: #4ec9b0;
+}
+
+.directive-description {
+  font-size: 11px;
+  color: #808080;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.props-display {
+  background: #2d2d2d;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Loading and error states */
+.loading,
+.error,
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #808080;
+}
+
+.error {
+  color: #f48771;
+}
