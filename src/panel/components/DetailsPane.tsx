@@ -45,6 +45,36 @@ export function DetailsPane({ node }: DetailsPaneProps) {
             </section>
           )}
 
+          {node.bundleSize !== undefined && (
+            <section className="details-section">
+              <h4>Bundle Size</h4>
+              <div className="details-value">
+                <code>{formatBytes(node.bundleSize)}</code>
+              </div>
+            </section>
+          )}
+
+          {node.hydrationTime !== undefined && (
+            <section className="details-section">
+              <h4>Hydration Time</h4>
+              <div className="details-value">
+                <code>{node.hydrationTime}ms</code>
+                <span className="hydration-indicator">
+                  {getHydrationIndicator(node.hydrationTime)}
+                </span>
+              </div>
+            </section>
+          )}
+
+          {node.componentUrl && (
+            <section className="details-section">
+              <h4>Component URL</h4>
+              <div className="details-value component-url">
+                <code>{node.componentUrl}</code>
+              </div>
+            </section>
+          )}
+
           {node.props && Object.keys(node.props).length > 0 && (
             <section className="details-section">
               <h4>Props</h4>
@@ -85,4 +115,23 @@ function getDirectiveDescription(directive: string): string {
     only: "Skips server-side rendering, only renders on the client",
   };
   return descriptions[directive] || "Custom hydration strategy";
+}
+
+/**
+ * Format bytes to human-readable string
+ */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Get a visual indicator for hydration time
+ */
+function getHydrationIndicator(ms: number): string {
+  if (ms < 50) return " ⚡"; // Fast
+  if (ms < 200) return " ✓"; // OK
+  if (ms < 500) return " ⚠️"; // Slow
+  return " 🐢"; // Very slow
 }

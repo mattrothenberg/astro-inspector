@@ -13,4 +13,10 @@ export interface TreeNode {
   depth: number;
   /** Path to find this element in the DOM (e.g., "0.1.3.0") */
   path: string;
+  /** URL to the component's JS bundle */
+  componentUrl?: string;
+  /** Size of the component's JS bundle in bytes */
+  bundleSize?: number;
+  /** Time in ms from page load to hydration complete */
+  hydrationTime?: number;
 }

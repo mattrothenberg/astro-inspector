@@ -51,7 +51,84 @@ function findParent(
   return null;
 }
 
-/** Script injected into the page to build the component tree */
+/** Collect all unique component URLs from the tree */
+function collectComponentUrls(node: TreeNode, urls: Set<string>): void {
+  if (node.componentUrl) {
+    urls.add(node.componentUrl);
+  }
+  for (const child of node.children) {
+    collectComponentUrls(child, urls);
+  }
+}
+
+/** Apply bundle sizes to tree nodes */
+function applyBundleSizes(
+  node: TreeNode,
+  sizes: Record<string, number>,
+): TreeNode {
+  const newNode = { ...node };
+  if (node.componentUrl && sizes[node.componentUrl] !== undefined) {
+    newNode.bundleSize = sizes[node.componentUrl];
+  }
+  newNode.children = node.children.map((child) =>
+    applyBundleSizes(child, sizes),
+  );
+  return newNode;
+}
+
+/** Fetch bundle sizes for all islands in the tree */
+async function fetchBundleSizes(
+  tree: TreeNode,
+  tabId: number,
+): Promise<TreeNode> {
+  // Collect all unique component URLs
+  const urls = new Set<string>();
+  collectComponentUrls(tree, urls);
+
+  if (urls.size === 0) return tree;
+
+  // Fetch sizes by executing in the page context (to handle relative URLs)
+  const urlArray = Array.from(urls);
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      args: [urlArray],
+      func: async (componentUrls: string[]) => {
+        const sizes: Record<string, number> = {};
+
+        await Promise.all(
+          componentUrls.map(async (url) => {
+            try {
+              // Resolve relative URL
+              const fullUrl = new URL(url, window.location.origin).href;
+              const response = await fetch(fullUrl, { method: "HEAD" });
+              const contentLength = response.headers.get("content-length");
+              if (contentLength) {
+                sizes[url] = parseInt(contentLength, 10);
+              }
+            } catch {
+              // Ignore errors for individual fetches
+            }
+          }),
+        );
+
+        return sizes;
+      },
+    });
+
+    const sizes = results?.[0]?.result as Record<string, number> | undefined;
+    if (sizes) {
+      return applyBundleSizes(tree, sizes);
+    }
+  } catch {
+    // If fetching fails, just return tree without sizes
+  }
+
+  return tree;
+}
+
+/** Script injected into the page to build the component tree and capture hydration data */
 function buildTreeInPage() {
   let nodeId = 0;
 
@@ -66,7 +143,17 @@ function buildTreeInPage() {
     children: TreeNodeData[];
     depth: number;
     path: string;
+    componentUrl?: string;
+    hydrationTime?: number;
   }
+
+  // Get hydration times if we've been tracking them
+  const hydrationTimes: Record<string, number> =
+    (
+      window as unknown as {
+        __astro_inspector_hydration_times__?: Record<string, number>;
+      }
+    ).__astro_inspector_hydration_times__ || {};
 
   function buildTree(element: Element, depth = 0, path = ""): TreeNodeData {
     const tagName = element.tagName.toLowerCase();
@@ -76,9 +163,12 @@ function buildTreeInPage() {
     let clientDirective: string | undefined;
     let props: Record<string, unknown> | undefined;
     let framework: string | undefined;
+    let componentUrl: string | undefined;
+    let hydrationTime: number | undefined;
 
     if (isIsland) {
       clientDirective = element.getAttribute("client") || "load";
+      componentUrl = element.getAttribute("component-url") || undefined;
 
       // Get component name from opts attribute
       const opts = element.getAttribute("opts");
@@ -116,6 +206,12 @@ function buildTreeInPage() {
       } else if (renderer.includes("preact")) {
         framework = "Preact";
       }
+
+      // Check if we have hydration timing for this island
+      const uid = element.getAttribute("uid");
+      if (uid && hydrationTimes[uid] !== undefined) {
+        hydrationTime = hydrationTimes[uid];
+      }
     }
 
     const node: TreeNodeData = {
@@ -129,6 +225,8 @@ function buildTreeInPage() {
       children: [],
       depth,
       path,
+      componentUrl,
+      hydrationTime,
     };
 
     Array.from(element.children).forEach((child, i) => {
@@ -141,6 +239,44 @@ function buildTreeInPage() {
   }
 
   return buildTree(document.body, 0, "");
+}
+
+/** Script to inject hydration timing listeners - should be run early */
+function injectHydrationTimingScript() {
+  // Only inject once
+  if (
+    (window as unknown as { __astro_inspector_injected__?: boolean })
+      .__astro_inspector_injected__
+  ) {
+    return;
+  }
+  (
+    window as unknown as { __astro_inspector_injected__?: boolean }
+  ).__astro_inspector_injected__ = true;
+
+  const times: Record<string, number> = {};
+  (
+    window as unknown as {
+      __astro_inspector_hydration_times__?: Record<string, number>;
+    }
+  ).__astro_inspector_hydration_times__ = times;
+
+  const startTime = performance.now();
+
+  // Listen for hydration events on all astro-islands
+  document.addEventListener(
+    "astro:hydrate",
+    (e) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName.toLowerCase() === "astro-island") {
+        const uid = target.getAttribute("uid");
+        if (uid) {
+          times[uid] = Math.round(performance.now() - startTime);
+        }
+      }
+    },
+    true,
+  );
 }
 
 export function App() {
@@ -163,6 +299,12 @@ export function App() {
         return;
       }
 
+      // First inject the hydration timing script (idempotent)
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: injectHydrationTimingScript,
+      });
+
       const results = await chrome.scripting.executeScript({
         target: { tabId },
         func: buildTreeInPage,
@@ -174,11 +316,14 @@ export function App() {
         return;
       }
 
-      setTree(treeData);
+      // Fetch bundle sizes for all islands
+      const treeWithSizes = await fetchBundleSizes(treeData, tabId);
+
+      setTree(treeWithSizes);
 
       // Auto-expand nodes that lead to islands
       const expanded = new Set<string>();
-      collectExpandedNodes(treeData, expanded);
+      collectExpandedNodes(treeWithSizes, expanded);
       setExpandedNodes(expanded);
     } catch (err) {
       setError(
